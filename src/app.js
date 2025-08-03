@@ -10,6 +10,8 @@ const __dirname = dirname(__filename);
 
 import userRouter from "./routes/user.route.js";
 import petTypeRoute from "./routes/pet.type.route.js";
+import forgotPasswordRoute from "./routes/forgot.password.route.js";
+import settingsRoute from "./routes/settings.route.js";
 
 const app = express();
 
@@ -30,7 +32,11 @@ app.use("/public", express.static(path.join(__dirname, "../public")));
 
 // // Routers
 app.use("/api/v1/user", userRouter);
+app.use("/api/v1/forgot-password", forgotPasswordRoute);
+
 app.use("/api/v1/pet-type", petTypeRoute);
+
+app.use("/api/v1/setting", settingsRoute);
 
 app.get("/", (req, res) => {
   const date = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });

@@ -9,7 +9,6 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-
 // sign up
 export const signupUser = async (req, res, next) => {
   try {
@@ -78,7 +77,7 @@ export const signupUser = async (req, res, next) => {
 };
 
 // // user login
-export const loginUser = async(req, res, next) => {
+export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -243,24 +242,50 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
-// // delete user account
-// exports.deleteUserAccount = async (req, res) => {
-//   try {
-//     const user = req?.decodedUser;
+// delete user account
+export const deleteUserAccount = async (req, res) => {
+  try {
+    const user = req?.decodedUser;
 
-//     const userId = user?._id;
-//     await User.deleteOne({ _id: userId });
+    // password check
+    const { password } = req.body;
 
-//     res.status(200).send({
-//       success: true,
-//       message: "User Deleted Successfully",
-//     });
-//   } catch (error) {
-//     res.status(500).send({
-//       success: false,
-//       message: "Error in Delete User",
-//       error: error.message,
-//     });
-//   }
-// };
+    if (!password) {
+      return res.status(201).send({
+        success: false,
+        message: "Password is required in body",
+      });
+    }
 
+    const isPasswordValid = bcrypt.compareSync(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: "Password is not correct",
+      });
+    }
+
+    // image delete
+    if (user.profilePicture) {
+      const oldFilename = user.profilePicture.split("/").pop();
+      const oldPath = path.join(process.cwd(), "public", "files", oldFilename);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    const userId = user?._id;
+    await User.deleteOne({ _id: userId });
+
+    res.status(200).send({
+      success: true,
+      message: "User Deleted Successfully",
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Error in Delete User",
+      error: error.message,
+    });
+  }
+};

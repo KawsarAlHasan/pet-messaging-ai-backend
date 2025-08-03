@@ -1,6 +1,7 @@
 import express from "express";
 import {
   changePassword,
+  deleteUserAccount,
   getMyProfile,
   loginUser,
   signupUser,
@@ -21,5 +22,7 @@ router.patch(
   verifyUserToken,
   updateProfile
 );
+
+router.delete("/delete-account", verifyUserToken, deleteUserAccount);
 
 export default router;
