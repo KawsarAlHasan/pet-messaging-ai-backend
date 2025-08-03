@@ -1,13 +1,15 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import userRouter from "./routes/user.route.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+import userRouter from "./routes/user.route.js";
+import petTypeRoute from "./routes/pet.type.route.js";
 
 const app = express();
 
@@ -28,6 +30,7 @@ app.use("/public", express.static(path.join(__dirname, "../public")));
 
 // // Routers
 app.use("/api/v1/user", userRouter);
+app.use("/api/v1/pet-type", petTypeRoute);
 
 app.get("/", (req, res) => {
   const date = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
