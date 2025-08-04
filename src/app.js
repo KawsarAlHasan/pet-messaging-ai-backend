@@ -9,8 +9,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import userRouter from "./routes/user.route.js";
-import petTypeRoute from "./routes/pet.type.route.js";
 import forgotPasswordRoute from "./routes/forgot.password.route.js";
+
+import petTypeRoute from "./routes/pet.type.route.js";
+import petRoute from "./routes/pet.route.js";
+
 import settingsRoute from "./routes/settings.route.js";
 
 const app = express();
@@ -34,6 +37,7 @@ app.use("/public", express.static(path.join(__dirname, "../public")));
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/forgot-password", forgotPasswordRoute);
 
+app.use("/api/v1/pet", petRoute);
 app.use("/api/v1/pet-type", petTypeRoute);
 
 app.use("/api/v1/setting", settingsRoute);

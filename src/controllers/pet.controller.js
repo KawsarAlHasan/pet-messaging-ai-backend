@@ -1,49 +1,57 @@
-import PetType from "../models/pet.type.modal.js";
+import Pets from "../models/pet.modal.js";
 import fs from "fs";
 import path from "path";
 
-// create pet type
-export const createPetType = async (req, res, next) => {
+// Create Pet
+export const createPet = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, dateOfBirth, petType, owner, status } = req.body;
 
-    if (!name) {
+    // Validate required fields
+    if (!name || !petType || !owner) {
       return res.status(400).json({
         success: false,
-        error: "Please provide the 'name' field in the body",
+        error: "Please provide 'name', 'petType', and 'owner' fields",
       });
     }
 
     // Handle image upload
-    let image = null;
+    let profilePicture = null;
     const file = req.file;
     if (file && file.filename) {
-      image = `${req.protocol}://${req.get("host")}/public/files/${
+      profilePicture = `${req.protocol}://${req.get("host")}/public/files/${
         file.filename
       }`;
     } else {
       return res.status(400).json({
         success: false,
-        error: "Please provide an image",
+        error: "Please provide a profile picture",
       });
     }
 
-    // Check if pet type already exists
-    const existingPetType = await PetType.findOne({ name });
-    if (existingPetType) {
+    // Check if a pet with the same name & owner already exists (to avoid duplicates)
+    const existingPet = await Pets.findOne({ name, owner });
+    if (existingPet) {
       return res.status(409).json({
         success: false,
-        error: "Pet type with this name already exists",
+        error: "A pet with this name already exists for this owner",
       });
     }
 
-    // Create new pet type
-    const response = await PetType.create({ name, image });
+    // Create new pet
+    const newPet = await Pets.create({
+      name,
+      dateOfBirth: dateOfBirth || null,
+      petType,
+      owner,
+      status: status || "active", // Default to "active" if not provided
+      profilePicture,
+    });
 
     res.status(201).json({
       success: true,
-      message: "Pet type created successfully",
-      data: response,
+      message: "Pet created successfully",
+      data: newPet,
     });
   } catch (error) {
     res.status(500).json({
