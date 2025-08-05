@@ -139,6 +139,7 @@ export const updatePetById = async (req, res, next) => {
 
     let profilePicture = pet.profilePicture;
     const file = req.file;
+
     if (file && file.filename) {
       if (pet.profilePicture) {
         const oldFilename = pet.profilePicture.split("/").pop();
@@ -174,6 +175,43 @@ export const updatePetById = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Pet updated successfully",
+      data: updatedPet,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+// update pet status by id
+export const updatePetStatusById = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+    const owner = req.decodedUser._id;
+
+    const pet = await Pets.findOne({ _id: id, owner });
+    if (!pet) {
+      return res.status(404).json({
+        success: false,
+        message: "Pet not found or you don't have permission",
+      });
+    }
+
+    const updatedPet = await Pets.findByIdAndUpdate(
+      id,
+      {
+        status: status || pet.status,
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Pet status updated successfully",
       data: updatedPet,
     });
   } catch (error) {

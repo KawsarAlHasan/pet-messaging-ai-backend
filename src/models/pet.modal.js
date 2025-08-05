@@ -29,8 +29,20 @@ const PetsSchema = mongoose.Schema(
     status: {
       type: String,
       // enum: ["active", "inactive", "blocked"],
-      default: "active",
+      default: "Active",
     },
+    petPersonality: [
+      {
+        key: {
+          type: String,
+          required: true,
+        },
+        value: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
