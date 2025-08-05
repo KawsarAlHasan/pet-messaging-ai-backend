@@ -5,13 +5,15 @@ import path from "path";
 // Create Pet
 export const createPet = async (req, res, next) => {
   try {
-    const { name, dateOfBirth, petType, owner, status } = req.body;
+    const { name, dateOfBirth, petType, gender, status } = req.body;
+
+    const owner = req.decodedUser._id;
 
     // Validate required fields
-    if (!name || !petType || !owner) {
+    if (!name || !petType || !gender) {
       return res.status(400).json({
         success: false,
-        error: "Please provide 'name', 'petType', and 'owner' fields",
+        error: "Please provide 'name', 'petType' and 'gender' fields",
       });
     }
 
@@ -44,6 +46,7 @@ export const createPet = async (req, res, next) => {
       dateOfBirth: dateOfBirth || null,
       petType,
       owner,
+      gender,
       status: status || "active", // Default to "active" if not provided
       profilePicture,
     });
@@ -62,22 +65,25 @@ export const createPet = async (req, res, next) => {
   }
 };
 
-// get all pet types
-export const getAllPetTypes = async (req, res, next) => {
+// get all my pet
+export const getAllMyPets = async (req, res, next) => {
   try {
-    const petTypes = await PetType.find();
+    const owner = req.decodedUser._id;
 
-    if (!petTypes) {
+    const pets = await Pets.find({ owner });
+
+    if (!pets) {
       return res.status(404).json({
         success: false,
-        message: "Pet types not found",
+        message: "Pets not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Pet types fetched successfully",
-      data: petTypes,
+      message: "Pets fetched successfully",
+      totalPets: pets.length,
+      data: pets,
     });
   } catch (error) {
     res.status(500).json({
@@ -88,24 +94,24 @@ export const getAllPetTypes = async (req, res, next) => {
   }
 };
 
-// get pet type by id
-export const getPetTypeById = async (req, res, next) => {
+// get pet  by id
+export const getPetById = async (req, res, next) => {
   try {
     const id = req.params.id;
 
-    const petType = await PetType.findById(id);
+    const pet = await Pets.findById(id);
 
-    if (!petType) {
+    if (!pet) {
       return res.status(404).json({
         success: false,
-        message: "Pet type not found",
+        message: "Pet not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Pet type fetched successfully",
-      data: petType,
+      message: "Pet fetched successfully",
+      data: pet,
     });
   } catch (error) {
     res.status(500).json({
@@ -116,38 +122,26 @@ export const getPetTypeById = async (req, res, next) => {
   }
 };
 
-// update pet type by id
-export const updatePetTypeById = async (req, res, next) => {
+// update pet by id
+export const updatePetById = async (req, res, next) => {
   try {
     const id = req.params.id;
-    const { name } = req.body;
+    const { name, dateOfBirth, petType, gender, status } = req.body;
+    const owner = req.decodedUser._id;
 
-    // Find existing pet type
-    const petType = await PetType.findById(id);
-    if (!petType) {
+    const pet = await Pets.findOne({ _id: id, owner });
+    if (!pet) {
       return res.status(404).json({
         success: false,
-        message: "Pet type not found",
+        message: "Pet not found or you don't have permission",
       });
     }
 
-    // Update name if provided
-    if (name) {
-      const existingPetType = await PetType.findOne({ name, _id: { $ne: id } });
-      if (existingPetType) {
-        return res.status(409).json({
-          success: false,
-          message: "Another pet type with this name already exists",
-        });
-      }
-      petType.name = name;
-    }
-
-    // Handle new image upload
+    let profilePicture = pet.profilePicture;
     const file = req.file;
     if (file && file.filename) {
-      if (petType.image) {
-        const oldFilename = petType.image.split("/").pop();
+      if (pet.profilePicture) {
+        const oldFilename = pet.profilePicture.split("/").pop();
         const oldPath = path.join(
           process.cwd(),
           "public",
@@ -159,19 +153,28 @@ export const updatePetTypeById = async (req, res, next) => {
         }
       }
 
-      // Set new image URL
-      petType.image = `${req.protocol}://${req.get("host")}/public/files/${
+      profilePicture = `${req.protocol}://${req.get("host")}/public/files/${
         file.filename
       }`;
     }
 
-    // Save updated pet type
-    await petType.save();
+    const updatedPet = await Pets.findByIdAndUpdate(
+      id,
+      {
+        name: name || pet.name,
+        dateOfBirth: dateOfBirth || pet.dateOfBirth,
+        petType: petType || pet.petType,
+        gender: gender || pet.gender,
+        profilePicture: profilePicture,
+        status: status || pet.status,
+      },
+      { new: true }
+    );
 
     res.status(200).json({
       success: true,
-      message: "Pet type updated successfully",
-      data: petType,
+      message: "Pet updated successfully",
+      data: updatedPet,
     });
   } catch (error) {
     res.status(500).json({
@@ -182,35 +185,37 @@ export const updatePetTypeById = async (req, res, next) => {
   }
 };
 
-// delete pet type by id
-export const deletePetTypeById = async (req, res, next) => {
+// delete pet by id
+export const deletePetById = async (req, res, next) => {
   try {
     const id = req.params.id;
+    const owner = req.decodedUser._id;
 
-    const petType = await PetType.findById(id);
-    if (!petType) {
+    const pet = await Pets.findOne({ _id: id, owner });
+    if (!pet) {
       return res.status(404).json({
         success: false,
-        message: "Pet type not found",
+        message: "Pet not found or you don't have permission",
       });
     }
 
-    if (petType.image) {
-      const oldFilename = petType.image.split("/").pop();
+    if (pet.profilePicture) {
+      const oldFilename = pet.profilePicture.split("/").pop();
       const oldPath = path.join(process.cwd(), "public", "files", oldFilename);
       if (fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
       }
     }
 
-    await PetType.findByIdAndDelete(id);
+    await Pets.findByIdAndDelete(id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Pet type deleted successfully",
+      message: "Pet deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Error deleting pet:", error);
+    return res.status(500).json({
       success: false,
       message: "Internal Server Error",
       error: error.message,
