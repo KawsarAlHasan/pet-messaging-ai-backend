@@ -5,7 +5,21 @@ import path from "path";
 // Create Pet
 export const createPet = async (req, res, next) => {
   try {
-    const { name, dateOfBirth, petType, gender, status } = req.body;
+    const {
+      name,
+      dateOfBirth,
+      petType,
+      gender,
+      status,
+      petAge,
+      petBreed,
+      isDomesticOrStray,
+      petPersonality,
+    } = req.body;
+
+    const parsedPetPersonality = petPersonality
+      ? JSON.parse(petPersonality)
+      : [];
 
     const owner = req.decodedUser._id;
 
@@ -49,6 +63,10 @@ export const createPet = async (req, res, next) => {
       gender,
       status: status || "active", // Default to "active" if not provided
       profilePicture,
+      petAge,
+      petBreed,
+      isDomesticOrStray,
+      petPersonality: parsedPetPersonality,
     });
 
     res.status(201).json({
@@ -122,13 +140,25 @@ export const getPetById = async (req, res, next) => {
   }
 };
 
-// update pet by id
+// // update pet by id
 export const updatePetById = async (req, res, next) => {
   try {
     const id = req.params.id;
-    const { name, dateOfBirth, petType, gender, status } = req.body;
+    const {
+      name,
+      dateOfBirth,
+      petType,
+      gender,
+      status,
+      petAge,
+      petBreed,
+      isDomesticOrStray,
+      petPersonality,
+    } = req.body;
+
     const owner = req.decodedUser._id;
 
+    // Find the pet and verify ownership
     const pet = await Pets.findOne({ _id: id, owner });
     if (!pet) {
       return res.status(404).json({
@@ -137,40 +167,74 @@ export const updatePetById = async (req, res, next) => {
       });
     }
 
-    let profilePicture = pet.profilePicture;
-    const file = req.file;
+    // Handle petPersonality (parse if it's a string)
+    let parsedPersonality = [];
+    try {
+      parsedPersonality = petPersonality
+        ? typeof petPersonality === "string"
+          ? JSON.parse(petPersonality)
+          : petPersonality
+        : pet.petPersonality;
+    } catch (parseError) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid petPersonality format",
+        error: parseError.message,
+      });
+    }
 
-    if (file && file.filename) {
+    // Handle profile picture update
+    let profilePicture = pet.profilePicture;
+    if (req.file) {
+      // Delete old picture if exists
       if (pet.profilePicture) {
-        const oldFilename = pet.profilePicture.split("/").pop();
-        const oldPath = path.join(
-          process.cwd(),
-          "public",
-          "files",
-          oldFilename
-        );
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
+        try {
+          const oldFilename = pet.profilePicture.split("/").pop();
+          const oldPath = path.join(
+            process.cwd(),
+            "public",
+            "files",
+            oldFilename
+          );
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+          }
+        } catch (fileError) {
+          console.error("Error deleting old profile picture:", fileError);
         }
       }
 
       profilePicture = `${req.protocol}://${req.get("host")}/public/files/${
-        file.filename
+        req.file.filename
       }`;
     }
 
-    const updatedPet = await Pets.findByIdAndUpdate(
-      id,
-      {
-        name: name || pet.name,
-        dateOfBirth: dateOfBirth || pet.dateOfBirth,
-        petType: petType || pet.petType,
-        gender: gender || pet.gender,
-        profilePicture: profilePicture,
-        status: status || pet.status,
-      },
-      { new: true }
-    );
+    // Prepare update data
+    const updateData = {
+      name: name || pet.name,
+      dateOfBirth: dateOfBirth || pet.dateOfBirth,
+      petType: petType || pet.petType,
+      gender: gender || pet.gender,
+      profilePicture,
+      status: status || pet.status,
+      petAge: petAge || pet.petAge,
+      petBreed: petBreed || pet.petBreed,
+      isDomesticOrStray: isDomesticOrStray || pet.isDomesticOrStray,
+      petPersonality: parsedPersonality,
+    };
+
+    // Perform the update
+    const updatedPet = await Pets.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedPet) {
+      return res.status(404).json({
+        success: false,
+        message: "Pet not found after update attempt",
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -178,6 +242,7 @@ export const updatePetById = async (req, res, next) => {
       data: updatedPet,
     });
   } catch (error) {
+    console.error("Error updating pet:", error);
     res.status(500).json({
       success: false,
       message: "Internal Server Error",

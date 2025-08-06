@@ -26,9 +26,11 @@ const PetsSchema = mongoose.Schema(
       enum: ["male", "female"],
     },
     profilePicture: String,
+    petAge: String,
+    petBreed: String,
+    isDomesticOrStray: String,
     status: {
       type: String,
-      // enum: ["active", "inactive", "blocked"],
       default: "Active",
     },
     petPersonality: [
