@@ -24,7 +24,8 @@ dbConnect();
 
 // server
 const port = process.env.PORT || 8000;
+const host = process.env.HOST || "localhost";
 
-app.listen(port, () => {
-  console.log(`Pet Messaging AI Server is running on port ${port}`);
+app.listen(port,host, () => {
+  console.log(`Pet Messaging AI Server is running on http://${host}:${port}`);
 });
