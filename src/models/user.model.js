@@ -25,6 +25,11 @@ const UserSchema = mongoose.Schema(
       enum: ["active", "inactive", "blocked"],
       default: "active",
     },
+    activePet: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Pets",
+      default: null,
+    },
   },
   { timestamps: true }
 );

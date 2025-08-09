@@ -1,4 +1,5 @@
 import Pets from "../models/pet.modal.js";
+import User from "../models/user.model.js";
 import fs from "fs";
 import path from "path";
 
@@ -68,6 +69,14 @@ export const createPet = async (req, res, next) => {
       isDomesticOrStray,
       petPersonality: parsedPetPersonality,
     });
+
+    // Check if user already has an active pet
+    const user = await User.findById(owner);
+    if (!user.activePet) {
+      // If no active pet, set the new pet as active
+      user.activePet = newPet._id;
+      await user.save();
+    }
 
     res.status(201).json({
       success: true,
@@ -278,6 +287,63 @@ export const updatePetStatusById = async (req, res, next) => {
       success: true,
       message: "Pet status updated successfully",
       data: updatedPet,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+export const updatePetActiveOnOwnerID = async (req, res, next) => {
+  try {
+    const { activePet } = req.body;
+    const owner = req.decodedUser._id;
+
+    // Validate input
+    if (!activePet) {
+      return res.status(400).json({
+        success: false,
+        error: "Please provide an 'activePet' ID in the request body",
+      });
+    }
+
+    // Check if the pet exists and belongs to this user
+    const pet = await Pets.findOne({ _id: activePet, owner });
+    if (!pet) {
+      return res.status(404).json({
+        success: false,
+        error: "Pet not found or doesn't belong to this user",
+      });
+    }
+
+    // Update user's activePet
+    const updatedUser = await User.findByIdAndUpdate(
+      owner,
+      { $set: { activePet: activePet } },
+      { new: true, runValidators: true }
+    ).select("-password"); // Exclude password from response
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+
+    // Populate the pet details in the response (optional)
+    const populatedUser = await User.populate(updatedUser, {
+      path: "activePet",
+    });
+
+    // .populate("activePet")
+
+    res.status(200).json({
+      success: true,
+      message: "Active pet updated successfully",
+      data: populatedUser,
     });
   } catch (error) {
     res.status(500).json({

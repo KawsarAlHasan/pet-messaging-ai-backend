@@ -20,7 +20,8 @@ export default async function verifyUserToken(req, res, next) {
       }
 
       const id = decoded.id;
-      const user = await User.findOne({ _id: id });
+
+      const user = await User.findById(id).populate("activePet");
 
       if (!user) {
         return res.status(404).json({
